@@ -1,28 +1,28 @@
 package servico;
 
 import modelo.Usuario;
-import java.util.ArrayList;
-import java.util.List;
 
 public class ServicoAutenticacao {
     
-    private List<Usuario> bancoDeUsuarios;
+    // A autenticação agora depende do serviço de usuários para funcionar
+    private ServicoUsuario servicoUsuario;
 
-    public ServicoAutenticacao() {
-        this.bancoDeUsuarios = new ArrayList<>();
-        bancoDeUsuarios.add(new Usuario("fellipe", "1234", "Admin"));
-        bancoDeUsuarios.add(new Usuario("cliente1", "senha1", "Cliente"));
+    // Recebemos o ServicoUsuario através do construtor
+    public ServicoAutenticacao(ServicoUsuario servicoUsuario) {
+        this.servicoUsuario = servicoUsuario;
     }
 
+    // A única responsabilidade desta classe: Autenticar
     public Usuario fazerLogin(String loginDigitado, String senhaDigitada) {
-        for (Usuario u : bancoDeUsuarios) {
-            if (u.getLogin().equals(loginDigitado) && u.getSenha().equals(senhaDigitada)) {
-                System.out.println("Acesso concedido! Bem-vindo, " + u.getLogin());
-                return u;
-            }
+        // Pede para o ServicoUsuario buscar as credenciais
+        Usuario usuarioEncontrado = servicoUsuario.buscarPorCredenciais(loginDigitado, senhaDigitada);
+
+        if (usuarioEncontrado != null) {
+            System.out.println("\nAcesso concedido! Bem-vindo, " + usuarioEncontrado.getLogin() + ".");
+            return usuarioEncontrado;
+        } else {
+            System.out.println("\nErro: Login ou senha incorretos.");
+            return null;
         }
-        
-        System.out.println("Erro: Login ou senha incorretos.");
-        return null;
     }
 }

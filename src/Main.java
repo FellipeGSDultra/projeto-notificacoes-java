@@ -1,73 +1,114 @@
 import modelo.Usuario;
 import servico.ServicoAutenticacao;
-import servico.ServicoUsuario; // <-- Novo import
-import java.util.Scanner;
+import servico.ServicoUsuario;
+import servico.ServicoNotificacoes;
+import visao.InterfaceUsuario;
 
 public class Main {
     public static void main(String[] args) {
-        // 1. Inicializa o banco de usuários primeiro
+        // 1. Inicializando os serviços e a interface
         ServicoUsuario servicoUsuario = new ServicoUsuario();
-        
-        // 2. Entrega o banco de usuários para a autenticação poder trabalhar
         ServicoAutenticacao auth = new ServicoAutenticacao(servicoUsuario);
+        ServicoNotificacoes servicoNotificacoes = new ServicoNotificacoes();
+        InterfaceUsuario ui = new InterfaceUsuario();
         
-        Scanner leitor = new Scanner(System.in);
-        boolean rodando = true;
+        boolean rodandoSistema = true;
 
-        while (rodando) {
-            System.out.println("\n======================");
-            System.out.println("Seja Bem-Vindo ao Sistema");
-            System.out.println("======================");
-            System.out.println("Selecione a opção desejada :");
-            System.out.println("1. Login");
-            System.out.println("2. Criar Conta");
-            System.out.println("3. Sair do Sistema");
-            System.out.print("Opção: ");
+        while (rodandoSistema) {
+            int opcaoInicial = ui.interfaceInicial();
 
-            int opcao = leitor.nextInt();
-            leitor.nextLine(); 
+            if (opcaoInicial == 1) { // LOGIN
+                System.out.println("\n--- TELA DE LOGIN ---");
+                String login = ui.lerTexto("Digite seu login: ");
+                String senha = ui.lerTexto("Digite sua senha: ");
+                
+                Usuario usuarioLogado = auth.fazerLogin(login, senha);
 
-            switch (opcao) {
-                case 1:
-                    System.out.println("\n--- TELA DE LOGIN ---");
-                    System.out.print("Digite seu login: ");
-                    String login = leitor.nextLine();
-                    
-                    System.out.print("Digite sua senha: ");
-                    String senha = leitor.nextLine();
+                if (usuarioLogado != null) {
+                    boolean rodandoPainel = true;
 
-                    Usuario usuarioLogado = auth.fazerLogin(login, senha);
-
-                    if (usuarioLogado != null) {
-                        System.out.println("Nível de acesso confirmado: " + usuarioLogado.getTipoUsuario());
-                        rodando = false; 
+                    // ==========================================
+                    // FLUXO DO CLIENTE
+                    // ==========================================
+                    if (usuarioLogado.getTipoUsuario().equals("Cliente")) {
+                        while (rodandoPainel) {
+                            int opcaoCliente = ui.interfaceClienteInicial(usuarioLogado.getLogin());
+                            
+                            if (opcaoCliente == 1) {
+                                System.out.println("\n[Módulo de Compras em desenvolvimento...]");
+                            } 
+                            else if (opcaoCliente == 2) {
+                                String tipoNotificacao = ui.interfaceClienteEnviarNotificacoes();
+                                
+                                if (tipoNotificacao.equals("Cancelar")) {
+                                    System.out.println("\nEnvio cancelado.");
+                                } else if (tipoNotificacao.equals("Invalido")) {
+                                    System.out.println("\n⚠️ Opção de notificação inválida! Tente novamente.");
+                                } else {
+                                    String mensagem = ui.lerTexto("Digite sua mensagem: ");
+                                    servicoNotificacoes.armazenarNotificacaoEnviada(tipoNotificacao, usuarioLogado.getLogin(), mensagem);
+                                }
+                            } 
+                            else if (opcaoCliente == 3) {
+                                System.out.println("\nSaindo da conta...");
+                                rodandoPainel = false; // Sai do laço do cliente e volta pro menu inicial
+                            } 
+                            else {
+                                System.out.println("\n⚠️ Opção inválida! Escolha uma opção válida do menu.");
+                            }
+                        }
+                    } 
+                    // ==========================================
+                    // FLUXO DO ADMIN
+                    // ==========================================
+                    else if (usuarioLogado.getTipoUsuario().equals("Admin")) {
+                        while (rodandoPainel) {
+                            int opcaoAdmin = ui.interfaceAdminInicial();
+                            
+                            if (opcaoAdmin == 1) {
+                                System.out.println("\n[Módulo de Cadastrar Funcionário em desenvolvimento...]");
+                            } 
+                            else if (opcaoAdmin == 2) {
+                                boolean lendoNotificacoes = true;
+                                while (lendoNotificacoes) {
+                                    int opcaoLer = ui.interfaceAdminLerNotificacoes();
+                                    
+                                    if (opcaoLer == 1) {
+                                        servicoNotificacoes.exibirNotificacaoNaoLida();
+                                    } else if (opcaoLer == 2) {
+                                        servicoNotificacoes.exibirNotificacaoLida();
+                                    } else if (opcaoLer == 3) {
+                                        lendoNotificacoes = false; // Volta pro menu do Admin
+                                    } else {
+                                        System.out.println("\n⚠️ Opção inválida! Escolha 1, 2 ou 3.");
+                                    }
+                                }
+                            } 
+                            else if (opcaoAdmin == 3) {
+                                System.out.println("\nSaindo da conta...");
+                                rodandoPainel = false; // Sai do laço do admin e volta pro menu inicial
+                            } 
+                            else {
+                                System.out.println("\n⚠️ Opção inválida! Escolha uma opção válida do menu.");
+                            }
+                        }
                     }
-                    break;
-
-                case 2:
-                    System.out.println("\n--- CRIAR CONTA (NOVO CLIENTE) ---");
-                    System.out.print("Digite o login desejado: ");
-                    String novoLogin = leitor.nextLine();
-                    
-                    System.out.print("Digite a senha desejada: ");
-                    String novaSenha = leitor.nextLine();
-
-                    // O MAIN agora fala diretamente com o ServicoUsuario para cadastrar
-                    servicoUsuario.cadastrarCliente(novoLogin, novaSenha);
-                    break;
-
-                case 3:
-                    System.out.println("\nSaindo... Até mais!");
-                    rodando = false;
-                    break;
-
-                default:
-                    System.out.println("\nOpção inválida. Escolha entre 1, 2 ou 3.");
-                    break;
+                }
+            } 
+            else if (opcaoInicial == 2) { // CRIAR CONTA
+                System.out.println("\n--- CRIAR CONTA (NOVO CLIENTE) ---");
+                String novoLogin = ui.lerTexto("Digite o login desejado: ");
+                String novaSenha = ui.lerTexto("Digite a senha desejada: ");
+                servicoUsuario.cadastrarCliente(novoLogin, novaSenha);
+            } 
+            else if (opcaoInicial == 3) { // SAIR
+                System.out.println("\nSaindo do sistema. Até mais!");
+                rodandoSistema = false;
+            } 
+            else {
+                // Captura opções fora de 1, 2, 3 e também captura o erro de letras (-1)
+                System.out.println("\n⚠️ Opção inválida! Por favor, digite 1, 2 ou 3.");
             }
         }
-        
-        System.out.println("\n[Redirecionando para o painel de Mensagens e Notificações...]");
-        leitor.close();
     }
 }
